@@ -1,10 +1,49 @@
 name: First workflow
-on: workflow_dispatch
-jobs: 
-  first-job:
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate changes
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Print greeting
         run: echo "Hello, World!"
+
+      - name: Show context
+        run: |
+          echo "Repository: ${{ github.repository }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Actor: ${{ github.actor }}"
+
+      - name: Verify README exists
+        run: test -f README.md
+
+  summary:
+    name: Job summary
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
       - name: Print goodbye
         run: echo "Bye!"
+
+      - name: Workflow summary
+        run: |
+          echo "### Workflow finished ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Trigger: ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
